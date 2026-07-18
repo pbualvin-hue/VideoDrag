@@ -10,6 +10,8 @@ natural language from a chat PWA — with every answer citing its source's
 > for others to read and learn from; running your own instance is on you.
 > See [Scope & honesty](#scope--honesty).
 
+![demo](docs/demo.gif)
+
 ---
 
 ## Why it might be worth your time
