@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+data/*
+!data/.gitkeep
+!data/vocabulary.example.txt
+*.m4a
+*.mp3
+*.wav
+.env
+
+digests/
+scripts/pi-upload.json

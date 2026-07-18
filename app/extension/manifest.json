@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "存到 vidrag",
+  "version": "1.0.0",
+  "description": "一鍵把當前網頁、選取的文字或連結送進 vidrag 個人知識庫（僅限 Tailscale 內網）。",
+  "permissions": ["contextMenus", "storage", "activeTab"],
+  "host_permissions": ["__VIDRAG_MATCH__"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_title": "存到 vidrag（這個頁面）",
+    "default_icon": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" }
+  },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "icons": { "16": "icon16.png", "32": "icon32.png", "48": "icon48.png", "128": "icon128.png" }
+}

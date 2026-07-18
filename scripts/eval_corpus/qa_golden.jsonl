@@ -1,0 +1,8 @@
+{"id": "a01", "question": "台積電為什麼難以被競爭者超越?", "expect_source": "fin_tsmc", "kind": "single"}
+{"id": "a02", "question": "被動投資和主動選股,兩邊各自的主張是什麼?", "expect_source": "fin_active", "kind": "cross_source"}
+{"id": "a03", "question": "想增肌,蛋白質到底要吃多少、還有什麼比訓練更容易被忽略?", "expect_source": "fit_hypertrophy", "kind": "single"}
+{"id": "a04", "question": "減脂最核心的原則是什麼?間歇性斷食有用嗎?", "expect_source": "fit_diet", "kind": "single"}
+{"id": "a05", "question": "RAG 為什麼能減少語言模型的幻覺?", "expect_source": "tech_rag", "kind": "single"}
+{"id": "a06", "question": "自己在家自架服務,有哪些一定要注意的點?", "expect_source": "tech_selfhost", "kind": "single"}
+{"id": "a07", "question": "比特幣現在這個價位該不該進場?", "expect_source": "none", "kind": "refuse"}
+{"id": "a08", "question": "端到端加密到底保護了什麼?", "expect_source": "tech_privacy", "kind": "single"}

@@ -1,0 +1,1 @@
+{"model": "claude-haiku-4-5", "judge": "claude-haiku-4-5", "n": 7, "refuse_n": 1, "refuse_ok": 1, "rubric_pass": {"faithful": 5, "citation": 0, "attribution": 7}}

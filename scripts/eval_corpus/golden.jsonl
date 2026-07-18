@@ -1,0 +1,34 @@
+{"id": "q01", "category": "ticker_exact", "query": "0050 的內扣費用大概多少?", "expect": [{"doc": "fin_0050", "text": "內扣費用大約在每年千分之四"}]}
+{"id": "q02", "category": "ticker_exact", "query": "2330 台積電為什麼重要?", "expect": [{"doc": "fin_tsmc", "text": "全世界最重要的晶圓代工廠"}]}
+{"id": "q03", "category": "ticker_exact", "query": "TLT 是追蹤什麼的 ETF?", "expect": [{"doc": "fin_bonds", "text": "追蹤二十年以上美國公債的 ETF"}]}
+{"id": "q04", "category": "ticker_exact", "query": "CoWoS 是什麼?", "expect": [{"doc": "fin_tsmc", "text": "先進封裝技術"}]}
+{"id": "q05", "category": "ticker_exact", "query": "168 斷食是什麼意思?", "expect": [{"doc": "fit_diet", "text": "十六個小時不進食"}]}
+{"id": "q06", "category": "ticker_exact", "query": "Zone 2 的心率大概是多少?", "expect": [{"doc": "fit_running", "text": "最大心率的百分之六十到七十"}]}
+{"id": "q07", "category": "ticker_exact", "query": "Docker 有什麼好處?", "expect": [{"doc": "tech_selfhost", "text": "打包成一個容器"}]}
+{"id": "q08", "category": "ticker_exact", "query": "Tailscale 是做什麼的?", "expect": [{"doc": "tech_selfhost", "text": "加密的虛擬區域網路"}]}
+{"id": "q09", "category": "proper_noun", "query": "漸進超負荷是什麼概念?", "expect": [{"doc": "fit_hypertrophy", "text": "漸進超負荷"}]}
+{"id": "q10", "category": "proper_noun", "query": "乳酸閾值是什麼?", "expect": [{"doc": "fit_running", "text": "產生乳酸的速度超過清除的速度"}]}
+{"id": "q11", "category": "proper_noun", "query": "護城河指的是什麼?", "expect": [{"doc": "fin_active", "text": "品牌、網路效應、規模成本"}]}
+{"id": "q12", "category": "proper_noun", "query": "端到端加密是什麼意思?", "expect": [{"doc": "tech_privacy", "text": "只有收訊的人能解開"}]}
+{"id": "q13", "category": "proper_noun", "query": "什麼是價值投資?", "expect": [{"doc": "fin_active", "text": "巴菲特式的價值投資"}]}
+{"id": "q14", "category": "proper_noun", "query": "殖利率曲線倒掛代表什麼?", "expect": [{"doc": "fin_bonds", "text": "殖利率曲線倒掛"}]}
+{"id": "q15", "category": "proper_noun", "query": "context window 是什麼限制?", "expect": [{"doc": "tech_rag", "text": "一次能讀進去的長度是有上限"}]}
+{"id": "q16", "category": "paraphrase", "query": "怎麼樣才能讓肌肉持續長大變壯?", "expect": [{"doc": "fit_hypertrophy", "text": "漸進超負荷"}]}
+{"id": "q17", "category": "paraphrase", "query": "想變瘦但不知道飲食該怎麼控制?", "expect": [{"doc": "fit_diet", "text": "熱量赤字"}]}
+{"id": "q18", "category": "paraphrase", "query": "電腦怎麼把一段話變成可以比較語意的數字?", "expect": [{"doc": "tech_rag", "text": "高維度的向量"}]}
+{"id": "q19", "category": "paraphrase", "query": "為什麼語言模型有時候會一本正經地亂編答案?", "expect": [{"doc": "tech_rag", "text": "幻覺"}]}
+{"id": "q20", "category": "paraphrase", "query": "在自己家裡弄一台機器放資料不靠雲端?", "expect": [{"doc": "tech_selfhost", "text": "self-hosting"}]}
+{"id": "q21", "category": "paraphrase", "query": "我的資料應該放在自己裝置還是別人的雲?", "expect": [{"doc": "tech_privacy", "text": "本地優先"}]}
+{"id": "q22", "category": "paraphrase", "query": "睡不夠會不會影響長肌肉?", "expect": [{"doc": "fit_hypertrophy", "text": "睡眠也常被低估"}]}
+{"id": "q23", "category": "paraphrase", "query": "剛開始練跑最容易犯的毛病?", "expect": [{"doc": "fit_running", "text": "每次練跑都跑太快"}]}
+{"id": "q24", "category": "single", "query": "蛋白質一天要攝取多少?", "expect": [{"doc": "fit_hypertrophy", "text": "一點六到二點二公克"}]}
+{"id": "q25", "category": "single", "query": "晶圓廠的資本支出為什麼那麼高?", "expect": [{"doc": "fin_tsmc", "text": "每年上千億的資本支出"}]}
+{"id": "q26", "category": "single", "query": "聯準會升降息怎麼影響債券?", "expect": [{"doc": "fin_bonds", "text": "債券價格跟殖利率是反向"}]}
+{"id": "q27", "category": "single", "query": "0050 的殖利率高不高?", "expect": [{"doc": "fin_0050", "text": "大概百分之三"}]}
+{"id": "q28", "category": "single", "query": "混合檢索為什麼要搭配關鍵字?", "expect": [{"doc": "tech_rag", "text": "混合檢索"}]}
+{"id": "q29", "category": "cross_source", "query": "被動投資和主動選股到底哪個比較好?", "expect": [{"doc": "fin_0050", "text": "被動投資"}, {"doc": "fin_active", "text": "集中持股"}]}
+{"id": "q30", "category": "cross_source", "query": "增肌和減脂在飲食上的重點差在哪?", "expect": [{"doc": "fit_hypertrophy", "text": "每公斤體重"}, {"doc": "fit_diet", "text": "熱量赤字"}]}
+{"id": "n01", "category": "negative", "query": "怎麼醃一缸好吃的韓式泡菜?", "expect": []}
+{"id": "n02", "category": "negative", "query": "台北到高雄的高鐵票價多少?", "expect": []}
+{"id": "n03", "category": "negative", "query": "貓咪半夜一直叫怎麼辦?", "expect": []}
+{"id": "n04", "category": "negative", "query": "第一次辦護照需要準備什麼文件?", "expect": []}

@@ -1,0 +1,26 @@
+# The portable unit of the whole system = this file + the data/ directory
+# (CLAUDE.md rule 20). Restore anywhere by bringing both.
+services:
+  vidrag:
+    build: .
+    image: vidrag:latest
+    container_name: vidrag
+    restart: unless-stopped          # boot-autostart is Docker's job
+    ports:
+      - "8080:8080"                  # Tailscale Serve terminates HTTPS in front
+    volumes:
+      - ./data:/data                 # .db / .env / cookies / backups — the state
+    # HF_HOME is set in the image (/opt/hf_cache) so the baked model isn't
+    # masked by the /data mount — do not override it here.
+
+  # cobalt fallback for when yt-dlp breaks platform-wide (CLAUDE.md 風險與備援).
+  # Disabled by default; enable with:  docker compose --profile cobalt up -d
+  cobalt:
+    image: ghcr.io/imputnet/cobalt:10
+    container_name: vidrag-cobalt
+    restart: unless-stopped
+    profiles: ["cobalt"]
+    environment:
+      - API_URL=http://localhost:9000/
+    ports:
+      - "9000:9000"

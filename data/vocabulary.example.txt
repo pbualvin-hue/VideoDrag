@@ -1,0 +1,16 @@
+# Whisper vocabulary hint — one term per line.
+# Copy to data/vocabulary.txt and replace with your own domain terms
+# (company names, tickers, jargon) to improve proper-noun recognition.
+# Joined into the Groq Whisper initial_prompt, truncated to ~224 tokens;
+# put the highest-value terms first (truncation keeps the prefix and logs it).
+#
+# These are generic examples, not investment advice or personal data.
+NVIDIA
+台積電 2330
+CoWoS
+Transformer
+RAG
+Zone 2
+VO2max
+Kubernetes
+PostgreSQL
