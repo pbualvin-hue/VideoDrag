@@ -11,6 +11,7 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import Response
 
 from . import db
 from .api import (routes_admin, routes_chat, routes_collections,
@@ -23,6 +24,20 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+
+class NoCacheStatic(StaticFiles):
+    """Serve the PWA shell with `Cache-Control: no-cache` so every load
+    revalidates against the ETag. Without it, Starlette sends only ETag +
+    Last-Modified; browsers then apply *heuristic* caching and keep serving a
+    stale app.js after a deploy — which silently drops new API fields the old
+    JS never reads (the gap-3 「這則回答的依據」 panel was invisible for exactly
+    this reason). Revalidation is cheap: unchanged assets return 304."""
+
+    async def get_response(self, path: str, scope) -> Response:
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 @asynccontextmanager
@@ -48,4 +63,4 @@ app.include_router(routes_admin.router, prefix="/api")
 app.include_router(routes_mcp.router, prefix="/api")
 app.include_router(routes_notes.router, prefix="/api")
 app.include_router(routes_collections.router, prefix="/api")
-app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+app.mount("/", NoCacheStatic(directory=WEB_DIR, html=True), name="web")
