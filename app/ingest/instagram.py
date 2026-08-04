@@ -59,6 +59,26 @@ def _check_duration(duration: int | None, norm: NormalizedUrl, limit: int) -> No
         )
 
 
+_IMAGE_GLOBS = ("*.jpg", "*.jpeg", "*.png", "*.webp")
+
+
+def _load_meta(workdir: Path) -> dict:
+    """Read gallery-dl post metadata. A single post writes `info.json`; a
+    carousel may write per-item `*.json` sidecars — take the first that parses
+    (caption/date are per-post, identical across items)."""
+    candidates = [workdir / "info.json", *sorted(workdir.glob("*.json"))]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
 def _via_gallery_dl(norm: NormalizedUrl, workdir: Path, limit: int) -> MediaResult:
     proc = subprocess.run(
         ["gallery-dl", "--cookies", str(_COOKIES), "-D", str(workdir),
@@ -69,29 +89,46 @@ def _via_gallery_dl(norm: NormalizedUrl, workdir: Path, limit: int) -> MediaResu
     if proc.returncode != 0:
         raise AdapterError("instagram", norm.canonical_url, "gallery-dl",
                            (proc.stderr or "").strip()[-400:] or "gallery-dl 失敗")
-    mp4s = list(workdir.glob("*.mp4"))
-    if not mp4s:
-        raise AdapterError("instagram", norm.canonical_url, "gallery-dl",
-                           "未產出影片檔(可能非影片貼文,或 cookie 失效)")
 
-    meta: dict = {}
-    info = workdir / "info.json"
-    if info.is_file():
-        try:
-            meta = json.loads(info.read_text(encoding="utf-8"))
-        except (ValueError, OSError):
-            meta = {}
-    duration = _safe_int(meta.get("audio_duration"))
-    _check_duration(duration, norm, limit)
-    title = (meta.get("description") or meta.get("username") or "").strip() or norm.video_id
+    meta = _load_meta(workdir)
+    caption = (meta.get("description") or "").strip()
+    published = _published_at(meta.get("post_date") or meta.get("date"))
+
+    mp4s = list(workdir.glob("*.mp4"))
+    if mp4s:
+        duration = _safe_int(meta.get("audio_duration"))
+        _check_duration(duration, norm, limit)
+        title = caption or (meta.get("username") or "").strip() or norm.video_id
+        return MediaResult(
+            metadata=SourceMetadata(
+                platform="instagram", video_id=norm.video_id, title=title,
+                url=norm.canonical_url, published_at=published,
+                duration_secs=duration, thumbnail_url=None),
+            audio_path=mp4s[0],
+        )
+
+    # No video: an image / carousel post (rule 1: type="image"). gallery-dl
+    # already fetched the images; the pipeline reads them via the vision path
+    # and keeps the caption as article text.
+    images = sorted(p for g in _IMAGE_GLOBS for p in workdir.glob(g))
+    if not images:
+        raise AdapterError("instagram", norm.canonical_url, "gallery-dl",
+                           "未產出影片或圖片(可能 cookie 失效或內容已下架)")
+    title = _first_line(caption) or (meta.get("username") or "").strip() or norm.video_id
     return MediaResult(
         metadata=SourceMetadata(
             platform="instagram", video_id=norm.video_id, title=title,
-            url=norm.canonical_url,
-            published_at=_published_at(meta.get("post_date") or meta.get("date")),
-            duration_secs=duration, thumbnail_url=None),
-        audio_path=mp4s[0],
+            url=norm.canonical_url, published_at=published,
+            duration_secs=None, type="image", thumbnail_url=None),
+        image_paths=images, caption=caption or None,
     )
+
+
+def _first_line(text: str) -> str:
+    for line in text.splitlines():
+        if line.strip():
+            return line.strip()[:120]
+    return ""
 
 
 def _via_ytdlp(norm: NormalizedUrl, workdir: Path, limit: int) -> MediaResult:

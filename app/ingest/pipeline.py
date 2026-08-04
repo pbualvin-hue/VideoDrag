@@ -22,7 +22,7 @@ from ..rag.embedder import Embedder, vector_to_blob
 from . import article, dispatcher
 from .base import TranscriptSegment
 from .normalize import classify
-from .transcribe import transcribe
+from .transcribe import has_audio_stream, transcribe
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,17 @@ def resolve_embedding_model(conn: sqlite3.Connection, settings: Settings) -> str
     EMBEDDING_MODEL override that mismatches meta will refuse startup in
     ensure_embedding_model."""
     return db.get_meta(conn, "embedding_model") or settings.embedding_model
+
+
+def _finalize_display_title(conn, settings, source_id) -> None:
+    """Best-effort AI topic name for the library card. The source is already
+    ready — a naming failure must never fail the ingest; the startup backfill
+    retries anything left unnamed."""
+    try:
+        from ..rag.summarize import generate_display_title
+        generate_display_title(conn, settings, source_id)
+    except Exception as exc:  # noqa: BLE001 — cosmetic, never fatal
+        logger.warning("display-title failed for source %s: %s", source_id, exc)
 
 
 def ingest_url(
@@ -114,6 +125,39 @@ def ingest_url(
             )
         title = s2twp.convert(media.metadata.title)
 
+        if media.has_images:
+            # IG image/carousel post (rule 1: type=image). No audio/transcript
+            # path applies — caption + vision produce the chunks.
+            n = _ingest_image_post(conn, settings, embedder, source_id,
+                                   title, media, workdir, inserted_vector_ids)
+            conn.execute(
+                "UPDATE sources SET type = 'image', title = ?,"
+                " published_at = ?, status = 'ready' WHERE source_id = ?",
+                (title, media.metadata.published_at, source_id),
+            )
+            conn.commit()
+            _finalize_display_title(conn, settings, source_id)
+            logger.info("image source %s ready: %d chunks", source_id, n)
+            return IngestOutcome(source_id, "ready", n)
+
+        if media.audio_path and not has_audio_stream(media.audio_path):
+            # Silent video (no audio stream, e.g. an IG slideshow reel): rule 3
+            # says on-screen content ⇒ vision. Read the local file's frames
+            # directly instead of hard-failing the audio preprocess.
+            n = _ingest_silent_video(conn, settings, embedder, source_id,
+                                     title, media, workdir)
+            conn.execute(
+                "UPDATE sources SET title = ?, published_at = ?,"
+                " duration_secs = ?, status = 'ready' WHERE source_id = ?",
+                (title, media.metadata.published_at,
+                 media.metadata.duration_secs, source_id),
+            )
+            conn.commit()
+            _finalize_display_title(conn, settings, source_id)
+            logger.info("silent-video source %s ready: %d visual chunks",
+                        source_id, n)
+            return IngestOutcome(source_id, "ready", n)
+
         if media.has_transcript:
             # Official captions and article text bypass transcribe.py, which
             # is where s2twp normally runs — convert here so simplified-Chinese
@@ -172,15 +216,7 @@ def ingest_url(
         )
         conn.commit()
 
-        # AI topic name for display (best-effort: the source is already
-        # ready — a naming failure must not fail the ingest; the startup
-        # backfill retries anything left unnamed).
-        try:
-            from ..rag.summarize import generate_display_title
-            generate_display_title(conn, settings, source_id)
-        except Exception as exc:  # noqa: BLE001 — cosmetic, never fatal
-            logger.warning("display-title failed for source %s: %s",
-                           source_id, exc)
+        _finalize_display_title(conn, settings, source_id)
 
         # Cosmetic cover thumbnail for the library card (best-effort).
         if not is_article and media.metadata.thumbnail_url:
@@ -309,12 +345,7 @@ def ingest_text(
         )
         conn.commit()
 
-        try:
-            from ..rag.summarize import generate_display_title
-            generate_display_title(conn, settings, source_id)
-        except Exception as exc:  # noqa: BLE001 — cosmetic, never fatal
-            logger.warning("display-title failed for source %s: %s",
-                           source_id, exc)
+        _finalize_display_title(conn, settings, source_id)
 
         logger.info("text source %s ready: %d chunks", source_id, len(chunks))
         return IngestOutcome(source_id, "ready", len(chunks))
@@ -424,12 +455,7 @@ def ingest_podcast(
         )
         conn.commit()
 
-        try:
-            from ..rag.summarize import generate_display_title
-            generate_display_title(conn, settings, source_id)
-        except Exception as exc:  # noqa: BLE001 — cosmetic, never fatal
-            logger.warning("display-title failed for source %s: %s",
-                           source_id, exc)
+        _finalize_display_title(conn, settings, source_id)
         logger.info("podcast source %s ready: %d chunks", source_id, len(chunks))
         return IngestOutcome(source_id, "ready", len(chunks))
     except Exception:
@@ -487,6 +513,81 @@ def _add_visual_chunks(
         )
     conn.commit()
     return len(ids)
+
+
+def _ingest_image_post(
+    conn, settings, embedder, source_id, title, media, workdir,
+    inserted_vector_ids: list,
+) -> int:
+    """Ingest an IG image/carousel post (rule 1: type=image). The caption
+    becomes article chunks and the images are read via the vision path; both
+    are source content and ARE embedded (rule 12 bars only AI-generated
+    answers). Raises if nothing at all could be extracted."""
+    from ..rag import vision
+
+    total = 0
+    if media.caption:
+        cap_chunks = chunk_transcript([TranscriptSegment(
+            text=s2twp.convert(media.caption), start_sec=0.0, end_sec=0.0)])
+        vectors = embedder.embed_chunks(title, [c.text for c in cap_chunks])
+        ids: list[int] = []
+        for c in cap_chunks:
+            cur = conn.execute(
+                "INSERT INTO chunks (source_id, modality, text, start_sec, end_sec)"
+                " VALUES (?, 'article', ?, ?, ?)",
+                (source_id, c.text, c.start_sec, c.end_sec),
+            )
+            ids.append(cur.lastrowid)
+        for cid, vec in zip(ids, vectors):
+            conn.execute(
+                "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+                (cid, vector_to_blob(vec)),
+            )
+            inserted_vector_ids.append(cid)
+        total += len(ids)
+
+    if settings.anthropic_api_key:
+        try:
+            vchunks = vision.analyze_images(
+                media.image_paths, workdir, settings,
+                _record_vision_usage(conn))
+            total += _add_visual_chunks(conn, embedder, source_id, title, vchunks)
+        except Exception as exc:  # noqa: BLE001 — supplementary, never fatal
+            logger.warning("image vision failed for source %s: %s", source_id, exc)
+    else:
+        logger.info("image vision skipped (no ANTHROPIC_API_KEY)")
+
+    if total == 0:
+        raise RuntimeError(
+            "圖片貼文無可擷取內容:無貼文文字,且未設定 ANTHROPIC_API_KEY 讀圖")
+
+    covers = settings.data_dir / "thumbnails"
+    covers.mkdir(parents=True, exist_ok=True)
+    vision._to_jpeg(media.image_paths[0], covers / f"{source_id}.jpg")
+    return total
+
+
+def _ingest_silent_video(
+    conn, settings, embedder, source_id, title, media, workdir,
+) -> int:
+    """Ingest a silent video (no audio stream) via vision on its frames
+    (rule 3). Reuses the already-downloaded file — no re-download. Raises if
+    the frames yield nothing so the source isn't left empty."""
+    from ..rag import vision
+
+    if not settings.anthropic_api_key:
+        raise RuntimeError("無聲影片需要 ANTHROPIC_API_KEY 讀取畫面內容")
+    frames = vision.extract_keyframes(media.audio_path, workdir / "frames")
+    if not frames:
+        raise RuntimeError("無聲影片無法擷取任何畫面")
+    vchunks = vision.analyze_frames(frames, settings, _record_vision_usage(conn))
+    n = _add_visual_chunks(conn, embedder, source_id, title, vchunks)
+    if n == 0:
+        raise RuntimeError("無聲影片畫面無可擷取內容")
+    covers = settings.data_dir / "thumbnails"
+    covers.mkdir(parents=True, exist_ok=True)
+    vision.save_cover_thumbnail(frames, covers / f"{source_id}.jpg")
+    return n
 
 
 def _maybe_run_vision(

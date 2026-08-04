@@ -49,10 +49,20 @@ class SourceMetadata:
 @dataclass(frozen=True)
 class MediaResult:
     metadata: SourceMetadata
-    # Exactly one of the two payloads is set:
+    # Exactly one payload is set per source type:
+    #   transcript   — official captions / article text
+    #   audio_path   — a downloaded a/v file to transcribe
+    #   image_paths  — an image/carousel post (rule 1: type="image"); read by
+    #                  the vision path, with caption carried as article text
     transcript: list[TranscriptSegment] = field(default_factory=list)
     audio_path: Path | None = None
+    image_paths: list[Path] = field(default_factory=list)
+    caption: str | None = None
 
     @property
     def has_transcript(self) -> bool:
         return bool(self.transcript)
+
+    @property
+    def has_images(self) -> bool:
+        return bool(self.image_paths)

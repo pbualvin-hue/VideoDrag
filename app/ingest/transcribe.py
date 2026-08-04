@@ -120,6 +120,18 @@ def preprocess_audio(src: Path, workdir: Path) -> Path:
     return out
 
 
+def has_audio_stream(path: Path) -> bool:
+    """True if the file carries an audio stream. A silent video (no audio,
+    e.g. an IG slideshow reel) must route to vision (rule 3) rather than
+    hard-fail ffmpeg's -vn audio preprocess."""
+    out = _run(
+        [_ffmpeg_bin("ffprobe"), "-v", "error", "-select_streams", "a",
+         "-show_entries", "stream=codec_type", "-of", "csv=p=0", str(path)],
+        stage="probe_audio",
+    )
+    return "audio" in out
+
+
 def probe_duration(path: Path) -> float:
     out = _run(
         [_ffmpeg_bin("ffprobe"), "-v", "error", "-show_entries",

@@ -512,7 +512,7 @@ async function showSessions() {
 }
 
 // ================= 研究庫(週分組時間軸,redesign 2026-07-14)=================
-const LIB_FILTERS = [["all", "全部"], ["video", "影片"], ["article", "文章"], ["text", "文字"]];
+const LIB_FILTERS = [["all", "全部"], ["video", "影片"], ["article", "文章"], ["text", "文字"], ["image", "圖片"]];
 
 async function renderLibrary() {
   // 方案 A(2026-07-16 使用者拍板):首屏只留一列工具列,
@@ -1046,7 +1046,12 @@ async function showDetail(id) {
   // 手動文字來源(platform=manual)沒有原始連結:不掛外連、不給畫面分析,
   // 「發布日期」實為貼上入庫日,標示清楚(rule 13)
   const manual = s.platform === "manual";
-  const chunks = d.chunks.map(c => manual
+  // Image/carousel posts (rule 1: type=image) have no timeline — render their
+  // caption + vision chunks as plain text, like manual, and hide the
+  // video-only 「重新分析畫面」 (reanalyze downloads a video that isn't there).
+  const isImage = s.type === "image";
+  const noTs = manual || isImage;
+  const chunks = d.chunks.map(c => noTs
     ? `<p>${esc(c.text)}</p>`
     : `<p><a class="t" href="${esc(s.url_normalized)}${s.platform === "youtube" ? `&t=${Math.floor(c.start_sec || 0)}s` : ""}"
        target="_blank" style="color:var(--accent)">[${fmtTs(c.start_sec)}]</a> ${esc(c.text)}</p>`).join("");
@@ -1060,11 +1065,11 @@ async function showDetail(id) {
       <button class="btn" id="dt-ask">針對這支影片提問</button>
       <button class="btn ghost" id="dt-rename">✏️ 改名</button>
       <button class="btn ghost" id="dt-col">📁 資料庫 ▾</button>
-      ${manual ? "" : '<button class="btn ghost" id="dt-reanalyze" title="Phase 4 提供">重新分析畫面</button>'}
+      ${noTs ? "" : '<button class="btn ghost" id="dt-reanalyze" title="Phase 4 提供">重新分析畫面</button>'}
       <button class="btn ghost" id="dt-export">匯出 Markdown</button>
       <button class="btn danger" id="dt-del">刪除</button>
     </div>
-    <h2>${manual ? "內文" : "逐字稿"}</h2>${chunks}`);
+    <h2>${manual ? "內文" : isImage ? "貼文內容" : "逐字稿"}</h2>${chunks}`);
   $("#dt-rename", m).onclick = async () => {
     // 只改 AI 顯示名;原始標題(資訊源)不動(2026-07-17 批次)
     const name = prompt("新的顯示名稱(40 字內):", dTitle(s));
